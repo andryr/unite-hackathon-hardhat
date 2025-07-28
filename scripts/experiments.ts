@@ -77,7 +77,7 @@ async function main() {
 
     const now = (): bigint => BigInt(Math.floor(Date.now() / 1000))
 
-    const order = new RfqOrder({
+    const order = new LimitOrder({
         makerAsset: new Address(USDC_ADDRESS),
         takerAsset: new Address(WETH_ADDRESS),
         makingAmount: 100_000000n, // 100 USDT
@@ -85,10 +85,7 @@ async function main() {
         maker: new Address(maker.address),
         // salt? : bigint
         // receiver? : Address
-    }, {
-        nonce: randBigInt(10000),
-        expiration: now() + 120n
-    })
+    }, makerTraits)
 
     const typedData = order.getTypedData(31337)
     const signature = await maker.signTypedData(
