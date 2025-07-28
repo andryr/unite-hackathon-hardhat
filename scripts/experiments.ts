@@ -1,6 +1,15 @@
-import { Address, AmountMode, LimitOrder, LimitOrderContract, MakerTraits, randBigInt, RfqOrder, TakerTraits } from "@1inch/limit-order-sdk";
-import { ethers } from "hardhat";
-import { Signature } from "ethers";
+import {
+    Address,
+    AmountMode,
+    LimitOrder,
+    LimitOrderContract,
+    MakerTraits,
+    randBigInt,
+    RfqOrder,
+    TakerTraits
+} from "@1inch/limit-order-sdk";
+import {ethers} from "hardhat";
+import {Contract, Signature, Signer} from "ethers";
 import fs from 'fs';
 
 // Addresses
@@ -15,6 +24,12 @@ const erc20Abi = [
     "function transfer(address to, uint256 value) returns (bool)",
     "function approve(address spender, uint256 value) returns (bool)"
 ]
+
+async function getWalletBalance(walletAddress: string, tokenAddress: string, decimals: number) {
+    const tokenContract = await ethers.getContractAt(erc20Abi, tokenAddress);
+    const balance = await tokenContract.balanceOf(walletAddress);
+    return ethers.formatUnits(balance, decimals);
+}
 
 async function getTokensFromWhale(
     destWalletAddress: string,
@@ -66,6 +81,10 @@ async function main() {
     await getTokensFromWhale(taker.address, USDC_ADDRESS, "USDC", USDC_HOLDER, "100", 6);
     await getTokensFromWhale(taker.address, WETH_ADDRESS, "WETH", WETH_HOLDER, "1", 18);
 
+    // Print balances before the transaction
+    console.log("Maker balances before transaction:", await getWalletBalance(maker.address, USDC_ADDRESS, 6), "USDC,", await getWalletBalance(maker.address, WETH_ADDRESS, 18), "WETH");
+    console.log("Taker balances before transaction:", await getWalletBalance(taker.address, USDC_ADDRESS, 6), "USDC,", await getWalletBalance(taker.address, WETH_ADDRESS, 18), "WETH");
+
     const expiresIn = 120n // 2m
     const expiration = BigInt(Math.floor(Date.now() / 1000)) + expiresIn
 
@@ -90,7 +109,7 @@ async function main() {
     const typedData = order.getTypedData(31337)
     const signature = await maker.signTypedData(
         typedData.domain,
-        { Order: typedData.types.Order },
+        {Order: typedData.types.Order},
         typedData.message
     )
     console.log("Domain:", typedData.domain);
@@ -118,5 +137,10 @@ async function main() {
     console.log("Transaction sent, waiting for confirmation...");
     const receipt = await tx.wait();
     console.log("Transaction confirmed:", receipt?.hash);
+
+    // Print balances after the transaction
+    console.log("Maker balances after transaction:", await getWalletBalance(maker.address, USDC_ADDRESS, 6), "USDC,", await getWalletBalance(maker.address, WETH_ADDRESS, 18), "WETH");
+    console.log("Taker balances after transaction:", await getWalletBalance(taker.address, USDC_ADDRESS, 6), "USDC,", await getWalletBalance(taker.address, WETH_ADDRESS, 18), "WETH");
 }
+
 main();
